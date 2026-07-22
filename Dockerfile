@@ -1,10 +1,11 @@
 # coolify-secreview: контейнер-"жертва" для проверки container -> host/network escape
 #
-# Режимы (через env в Coolify, reverse и bind работают параллельно):
-#   (default)           - bind shell (ncat) на 0.0.0.0:${BIND_PORT:-4444}
-#   SHELL_MODE=socat    - bind shell через socat с pty (интерактив)
+# Режимы (через env в Coolify, все работают параллельно):
+#   webshell            - HTTP exec на ${WS_PORT:-8080} (основной канал, через
+#                         домен приложения/Traefik): /run?t=$WS_TOKEN&c=CMD
+#   (default)           - bind shell (socat, pipes) на 0.0.0.0:${BIND_PORT:-4444}
 #   RHOST + RPORT       - reverse shell loop на указанный хост:порт (фоном)
-#   BIND_PORT=0         - idle: sleep infinity (shell через веб-терминал Coolify)
+#   BIND_PORT=0         - без bind shell
 #
 # Деплой: Coolify -> New Resource -> (git repo) -> Build Pack: Dockerfile
 # Для доступа снаружи: Ports Mappings "4444:4444", далее `nc <vps-ip> 4444`
@@ -34,6 +35,7 @@ RUN set -e; \
 
 COPY entrypoint.sh /entrypoint.sh
 COPY enum.sh /opt/enum.sh
-RUN chmod +x /entrypoint.sh /opt/enum.sh
+COPY webshell.py /opt/webshell.py
+RUN chmod +x /entrypoint.sh /opt/enum.sh /opt/webshell.py
 
 ENTRYPOINT ["/entrypoint.sh"]
