@@ -1,9 +1,10 @@
 # coolify-secreview: контейнер-"жертва" для проверки container -> host/network escape
 #
-# Режимы (через env в Coolify):
-#   (default)         - bind shell (socat, pty) на 0.0.0.0:${BIND_PORT:-4444}
-#   RHOST + RPORT     - reverse shell loop на указанный хост:порт
-#   BIND_PORT=0       - idle: sleep infinity (shell через веб-терминал Coolify)
+# Режимы (через env в Coolify, reverse и bind работают параллельно):
+#   (default)           - bind shell (ncat) на 0.0.0.0:${BIND_PORT:-4444}
+#   SHELL_MODE=socat    - bind shell через socat с pty (интерактив)
+#   RHOST + RPORT       - reverse shell loop на указанный хост:порт (фоном)
+#   BIND_PORT=0         - idle: sleep infinity (shell через веб-терминал Coolify)
 #
 # Деплой: Coolify -> New Resource -> (git repo) -> Build Pack: Dockerfile
 # Для доступа снаружи: Ports Mappings "4444:4444", далее `nc <vps-ip> 4444`
